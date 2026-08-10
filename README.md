@@ -378,5 +378,4 @@ For issues, questions, or suggestions:
 
 ---
 
-**Created with ❤️ by Veronica GaoZhan**  
-*Center of Excellence in Lasers and Optical Fiber Technology*
+**Created by Veronica GaoZhan**  
