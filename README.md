@@ -62,6 +62,119 @@ for ivl in results.ivl_data:
     print(f"Step {params.step}: Ith={params.threshold_current_A*1e3:.4f} mA")
 ```
 
+## Example Scripts
+
+The `examples/` folder contains ready-to-use scripts demonstrating the library:
+
+### 1. Basic Analysis (`basic_analysis.py`)
+
+Simple usage example showing how to load data, extract parameters, and create plots:
+
+```bash
+python examples/basic_analysis.py
+```
+
+Demonstrates:
+- Loading data from a folder
+- Extracting all parameters
+- Creating 2x2 plot grid with trends
+
+### 2. Batch Processing (`batch_analysis.py`)
+
+Process multiple measurement folders and export results to CSV:
+
+```bash
+python examples/batch_analysis.py
+```
+
+Processes all `measurement_*` folders in the current directory and exports parameter tables.
+
+### 3. Custom Analysis (`custom_analysis.py`)
+
+Detailed analysis of a single measurement file using individual extraction methods:
+
+```bash
+python examples/custom_analysis.py measurement_step_1.csv
+```
+
+Shows:
+- Different threshold extraction methods
+- Detailed efficiency analysis
+- Semi-log I-V for ideality factor
+- 2x2 plot comparison
+
+## Usage Examples
+
+### Example 1: Load and Plot Data
+
+```python
+from step_stress_analysis import load_folder_data
+import matplotlib.pyplot as plt
+
+# Load data
+results = load_folder_data("./measurement_data")
+
+# Create a simple plot
+fig, ax = plt.subplots()
+for ivl in results.ivl_data:
+    ax.plot(ivl.current * 1e3, ivl.optical_power * 1e6, 
+           label=f"Step {ivl.step}")
+ax.set_xlabel("Current (mA)")
+ax.set_ylabel("Optical Power (μW)")
+ax.legend()
+plt.show()
+```
+
+### Example 2: Use Visualization Module
+
+```python
+from step_stress_analysis import load_folder_data, extract_all_parameters
+from step_stress_analysis.visualization import plot_ivl_characteristics
+import matplotlib.pyplot as plt
+
+# Load and extract
+results = load_folder_data("./measurement_data")
+for ivl in results.ivl_data:
+    results.parameters.append(extract_all_parameters(ivl))
+
+# Create publication-ready plot
+fig = plt.figure(figsize=(12, 10))
+plot_ivl_characteristics(fig, results.ivl_data, results.parameters)
+plt.savefig("ivl_characteristics.png", dpi=300)
+plt.show()
+```
+
+### Example 3: Custom Parameter Extraction
+
+```python
+from step_stress_analysis import (
+    load_measurement_csv,
+    extract_threshold_max_slope,
+    calculate_power_conversion_efficiency
+)
+
+# Load single measurement
+ivl = load_measurement_csv("measurement_step_01.csv")
+
+# Extract threshold using maximum slope method
+i_th, v_th, _, _ = extract_threshold_max_slope(
+    ivl.current, 
+    ivl.optical_power
+)
+
+# Calculate efficiency
+pce_percent = calculate_power_conversion_efficiency(
+    ivl.voltage,
+    ivl.current,
+    ivl.optical_power
+)
+
+print(f"Threshold: {i_th*1e3:.4f} mA")
+if isinstance(pce_percent, tuple):
+    max_pce, _, _ = pce_percent
+    print(f"Max PCE: {max_pce:.2f}%")
+```
+
 ## Project Structure
 
 ```
@@ -72,9 +185,12 @@ step_stress_analysis_lib/
 │   ├── data_loader.py           # Functions to load CSV measurement files
 │   ├── parameter_extractor.py   # Parameter extraction algorithms
 │   ├── analysis_worker.py       # QThread worker for GUI responsiveness
+│   ├── visualization.py         # Plotting functions for programmatic use
 │   └── gui.py                   # PyQt5 GUI implementation
 ├── examples/
-│   └── basic_usage.py           # Example scripts demonstrating the library
+│   ├── basic_analysis.py        # Minimal usage example with plots
+│   ├── batch_analysis.py        # Batch processing multiple datasets
+│   └── custom_analysis.py       # Custom parameter extraction methods
 ├── main.py                      # GUI application entry point
 ├── setup.py                     # Package configuration
 ├── requirements.txt             # Python dependencies
@@ -118,6 +234,19 @@ step_stress_analysis_lib/
 - Series resistance (Ω)
 - Wall-plug efficiency
 
+### Visualization (`visualization.py`)
+
+Reusable plotting functions for programmatic use:
+
+- `plot_ivl_characteristics()`: I-V, L-I, L-V, and semi-log plots
+- `plot_stress_monitoring()`: Continuous stress vs. time
+- `plot_parameter_trends()`: Parameter degradation trends
+- `plot_pce_analysis()`: Power conversion efficiency analysis
+- `plot_relative_stress()`: Normalized stress data per step
+- `plot_fitting_examples()`: Threshold extraction visualization
+
+All plotting functions work with matplotlib Figures for easy integration into reports or custom workflows.
+
 ### GUI Features (`gui.py`)
 
 **6 Analysis Tabs:**
@@ -159,81 +288,6 @@ The GUI allows configuration of:
 - **Integration Time**: Measurement duration
 - **Stress Parameters**: Duration, level, pulse parameters
 - **Output Options**: CSV export paths
-
-## Usage Examples
-
-### Example 1: Basic Analysis
-
-```python
-from step_stress_analysis import load_folder_data, extract_all_parameters
-
-# Load data
-results = load_folder_data("./measurement_data")
-
-# Process each step
-for ivl in results.ivl_data:
-    params = extract_all_parameters(ivl)
-    print(f"Threshold: {params.threshold_current_A*1e3:.4f} mA")
-    print(f"Max Power: {params.max_power_W*1e6:.4f} μW")
-    print(f"PCE: {params.max_pce_pct:.2f}%")
-```
-
-### Example 2: Custom Analysis
-
-```python
-import numpy as np
-from step_stress_analysis import (
-    load_measurement_csv,
-    extract_threshold_max_slope,
-    calculate_power_conversion_efficiency
-)
-
-# Load single measurement
-ivl = load_measurement_csv("measurement_step_01.csv")
-
-# Custom threshold extraction
-i_th, slope, i_arr, slope_arr = extract_threshold_max_slope(
-    ivl.current, 
-    ivl.optical_power
-)
-
-# Efficiency analysis
-i_pce, pce, max_pce, _, _ = calculate_power_conversion_efficiency(
-    ivl.voltage,
-    ivl.current,
-    ivl.optical_power
-)
-
-print(f"Threshold: {i_th*1e3:.4f} mA")
-print(f"Max PCE: {max_pce:.2f}%")
-```
-
-### Example 3: Batch Processing
-
-```python
-from pathlib import Path
-import csv
-from step_stress_analysis import load_folder_data, extract_all_parameters
-
-# Load all data
-results = load_folder_data("./results")
-
-# Export to CSV
-with open("analysis_results.csv", "w", newline="") as f:
-    writer = csv.DictWriter(f, fieldnames=[
-        "Step", "Stress", "Ith_mA", "Pmax_uW", "PCE_pct"
-    ])
-    writer.writeheader()
-    
-    for p in results.parameters:
-        writer.writerow({
-            "Step": p.step,
-            "Stress": f"{p.stress_level:.6f}",
-            "Ith_mA": f"{p.threshold_current_A*1e3:.6f}",
-            "Pmax_uW": f"{p.max_power_W*1e6:.6f}",
-            "PCE_pct": f"{p.max_pce_pct:.4f}"
-        })
-```
 
 ## Output Files
 
