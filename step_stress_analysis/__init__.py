@@ -41,6 +41,9 @@ from .parameter_extractor import (
 from .analysis_worker import AnalysisWorker
 from .gui import StepStressAnalysisGUI
 
+# Import visualization functions (optional, for programmatic plotting)
+from . import visualization
+
 __all__ = [
     # Models
     'IVLData',
@@ -65,5 +68,8 @@ __all__ = [
     
     # GUI and threading
     'AnalysisWorker',
-    'StepStressAnalysisGUI'
+    'StepStressAnalysisGUI',
+    
+    # Visualization module
+    'visualization'
 ]
